@@ -6,6 +6,8 @@ from cloudwash.logger import logger
 from cloudwash.providers.aws import cleanup as awsCleanup
 from cloudwash.providers.azure import cleanup as azureCleanup
 from cloudwash.providers.gce import cleanup as gceCleanup
+from cloudwash.providers.ocp import cleanup as ocpCleanup
+
 
 # Adding the pythonpath for importing modules from cloudwash packages
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
@@ -136,6 +138,22 @@ def rhev(ctx, vms, discs, nics, _all):
 def openstack(ctx, vms, discs, nics, _all):
     validate_provider(ctx.command.name)
     # TODO: Further TO_BE_IMPLEMENTED
+
+
+@cleanup_providers.command(help="Cleanup OCP clusters")
+@common_options
+@click.option("--aws", is_flag=True, help="Remove resources from the AWS cloud provider")
+@click.option("--vpc", is_flag=True, help="Remove only VPC peering connections from the cloud")
+@click.pass_context
+def ocp_aws(ctx, vpc, _all):
+    validate_provider(ctx.command.name)
+
+    is_dry_run = ctx.parent.params["dry"]
+    ocpCleanup(
+        aws=aws,
+        _all=_all,
+        dry_run=is_dry_run,
+    )
 
 
 if __name__ == "__main__":
