@@ -7,14 +7,17 @@ from cloudwash.utils import echo_dry
 from cloudwash.utils import total_running_time
 from cloudwash.utils import delete_ocp
 
-def cleanup(**kwargs):
+EC2_OCP_TAG = "tag.key:kubernetes.io/cluster/*"
 
+
+def cleanup(**kwargs):
     is_dry_run = kwargs["dry_run"]
     data = ['VMS', 'DISCS', 'PIPS', 'RESOURCES']
     regions = settings.providers.ec2.regions
     with compute_client("ec2", ec2_region="us-west-2") as client:
         if "all" in regions:
             regions = client.list_regions()
+    regions = ["us-east-1"]  # Aggregator index
     for region in regions:
         dry_data['VMS']['stop'] = []
         dry_data['VMS']['skip'] = []
@@ -52,10 +55,9 @@ def cleanup(**kwargs):
                 [dry_data["PIPS"]["delete"].append(dpip["AllocationId"]) for dpip in rpips]
                 return dry_data["PIPS"]["delete"]
 
-            def dry_ocps():
-                all_ocps = ec2_client.list_ocps()
+            def dry_ocps(time_ref=""):
+                all_ocps = ec2_client.list_resources(query=EC2_OCP_TAG, time_ref=time_ref)
                 for ocp in all_ocps:
-                    # TODO: Filter according to the SLA_MINUTES
                     dry_data["OCPS"]["delete"].append(ocp)
                 return dry_data["OCPS"]["delete"]
 
@@ -91,7 +93,7 @@ def cleanup(**kwargs):
                     ec2_client.remove_all_unused_ips()
                     logger.info(f"Removed PIPs: \n{rpips}")
             if kwargs["ocps"]:
-                rocps = dry_ocps()
+                rocps = dry_ocps(kwargs.get("older_than"))
                 if not is_dry_run:
                     for ocp in rocps:
                         delete_ocp(ocp)
