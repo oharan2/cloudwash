@@ -56,7 +56,22 @@ def cleanup(**kwargs):
                 return dry_data["PIPS"]["delete"]
 
             def dry_ocps(time_ref=""):
+                # list_of_ocp = obtaing the list using ResouExplorer
+                # for each ocp in list_of_ocp:
+                #   for each resource associated with the ocp:
+                #     if resource.Type == ec2.instance:
+                #       instance = get instance with resources.Id
+                #       work with instance.CreationTime
+                #     if there is no instance:
+                #       no instance associated with ocp => leftover
+                import ipdb
+                ipdb.set_trace()
+                # time_ref = "{}m".format(settings.sla_minutes)
                 all_ocps = ec2_client.list_resources(query=EC2_OCP_TAG, time_ref=time_ref)
+
+                exit()
+                # FROM CSPI cloud-tools
+                #  for conn in ec2_client(region_name=region_name).describe_vpc_peering_connections()["VpcPeeringConnections"]:
                 for ocp in all_ocps:
                     dry_data["OCPS"]["delete"].append(ocp)
                 return dry_data["OCPS"]["delete"]

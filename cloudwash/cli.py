@@ -117,7 +117,7 @@ def openstack(ctx, vms, discs, nics, _all):
 
 
 if __name__ == "__main__":
-    validate_provider("ec2")
-    is_dry_run = True
-    ec2Cleanup(vms=False, discs=False, nics=False, pips=False, ocps=True, _all=False, dry_run=is_dry_run,older_than="1h")
-    # cleanup_providers()
+    # validate_provider("ec2")
+    # is_dry_run = True
+    # ec2Cleanup(vms=False, discs=False, nics=False, pips=False, ocps=True, _all=False, dry_run=is_dry_run,older_than="1h")
+    cleanup_providers()
