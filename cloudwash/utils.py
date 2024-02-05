@@ -110,6 +110,7 @@ def gce_zones() -> list:
     zones = [f"{loc}-{zone}" for loc, zones in _zones_combo.items() for zone in zones]
     return zones
 
+
 def delete_ocp(ocp):
     name = ocp["name"]
     logger.info(f"Delete OCP '{name}'")

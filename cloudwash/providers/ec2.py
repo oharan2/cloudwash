@@ -1,4 +1,6 @@
 """ec2 CR Cleanup Utilities"""
+from botocore.client import ClientError
+
 from cloudwash.client import compute_client
 from cloudwash.config import settings
 from cloudwash.logger import logger
@@ -8,7 +10,7 @@ from cloudwash.utils import total_running_time
 from cloudwash.utils import delete_ocp
 
 EC2_OCP_TAG = "tag.key:kubernetes.io/cluster/*"
-
+EC2_INSTANCE_FILTER = "resourcetype:ec2:instance"
 
 def cleanup(**kwargs):
     is_dry_run = kwargs["dry_run"]
@@ -17,7 +19,7 @@ def cleanup(**kwargs):
     with compute_client("ec2", ec2_region="us-west-2") as client:
         if "all" in regions:
             regions = client.list_regions()
-    regions = ["us-east-1"]  # Aggregator index
+    regions = ["ap-south-1","us-east-1","us-east-2"]  # Aggregator index # TODO remove
     for region in regions:
         dry_data['VMS']['stop'] = []
         dry_data['VMS']['skip'] = []
@@ -55,23 +57,30 @@ def cleanup(**kwargs):
                 [dry_data["PIPS"]["delete"].append(dpip["AllocationId"]) for dpip in rpips]
                 return dry_data["PIPS"]["delete"]
 
-            def dry_ocps(time_ref=""):
-                # list_of_ocp = obtaing the list using ResouExplorer
-                # for each ocp in list_of_ocp:
-                #   for each resource associated with the ocp:
-                #     if resource.Type == ec2.instance:
-                #       instance = get instance with resources.Id
-                #       work with instance.CreationTime
-                #     if there is no instance:
-                #       no instance associated with ocp => leftover
+            def dry_ocps():
+                """
+                Obtains list of available resources using AWS ResourceExplorer(resource-explorer-2). For each
+                resource associated with the ocp tag; if it's an EC2 instance, we'll work with instance CreationTime
+                stamp, otherwise this resource will be considered as a leftover (not associated with an OCP cluster).
+                """
+                # TODO botocore.errorfactory.UnauthorizedException:
+                # An error occurred (UnauthorizedException) when calling the Search operation: Unauthorized
+                # https://docs.aws.amazon.com/resource-explorer/latest/userguide/troubleshooting_search.html#:~:text=The%20Region%20with%20the%20resource%20doesn%27t%20have%20Resource%20Explorer%20turned%20on
+                time_ref = "{}m".format(settings.sla_minutes)
+                query = " ".join([EC2_OCP_TAG, EC2_INSTANCE_FILTER, "region:{}".format(region)])
                 import ipdb
                 ipdb.set_trace()
-                # time_ref = "{}m".format(settings.sla_minutes)
-                all_ocps = ec2_client.list_resources(query=EC2_OCP_TAG, time_ref=time_ref)
+                all_ocps = ec2_client.list_resources(query=query)
+                if isinstance(all_ocps,ClientError):
+                    logger.info(f"Region {region} is Unauthorized")
+                    return dry_data["OCPS"]["delete"]
 
-                exit()
+                print(len(all_ocps))
+                # filtered_ec2_instances = ec2_client.list_resources(query=query, time_ref=time_ref)
+
                 # FROM CSPI cloud-tools
                 #  for conn in ec2_client(region_name=region_name).describe_vpc_peering_connections()["VpcPeeringConnections"]:
+
                 for ocp in all_ocps:
                     dry_data["OCPS"]["delete"].append(ocp)
                 return dry_data["OCPS"]["delete"]
@@ -108,7 +117,7 @@ def cleanup(**kwargs):
                     ec2_client.remove_all_unused_ips()
                     logger.info(f"Removed PIPs: \n{rpips}")
             if kwargs["ocps"]:
-                rocps = dry_ocps(kwargs.get("older_than"))
+                rocps = dry_ocps()
                 if not is_dry_run:
                     for ocp in rocps:
                         delete_ocp(ocp)

@@ -82,14 +82,14 @@ def azure(ctx, vms, discs, nics, pips, _all, _all_rg):
 @common_options
 @click.option("--pips", is_flag=True, help="Remove only Public IPs from the provider")
 @click.option("--ocps", is_flag=True, help="Remove only unused OCPs from the provider")
-@click.option("--older_than", default="7d", help="Only remove resources that are older than the relative time "
-                                                 "reference, formatted as {time_value}{time-unit}")
+# @click.option("--older_than", default="7d", help="Only remove resources that are older than the relative time "
+#                                                  "reference, formatted as {time_value}{time-unit}")
 @click.pass_context
-def ec2(ctx, vms, discs, nics, pips, ocps, _all, older_than):
+def ec2(ctx, vms, discs, nics, pips, ocps, _all):
     # Validate Amazon Settings
     validate_provider(ctx.command.name)
     is_dry_run = ctx.parent.params["dry"]
-    ec2Cleanup(vms=vms, discs=discs, nics=nics, pips=pips, ocps=ocps, _all=_all, dry_run=is_dry_run, older_than=older_than)
+    ec2Cleanup(vms=vms, discs=discs, nics=nics, pips=pips, ocps=ocps, _all=_all, dry_run=is_dry_run)
 
 
 @cleanup_providers.command(help="Cleanup VMWare provider")
