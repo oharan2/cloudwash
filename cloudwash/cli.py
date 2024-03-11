@@ -1,10 +1,13 @@
 import click
 
+from cloudwash.config import settings
 from cloudwash.config import validate_provider
 from cloudwash.logger import logger
+from cloudwash.providers.aws import cleanup as awsCleanup
 from cloudwash.providers.azure import cleanup as azureCleanup
 from cloudwash.providers.ec2 import cleanup as ec2Cleanup
 from cloudwash.providers.gce import cleanup as gceCleanup
+from cloudwash.providers.vmware import cleanup as vmwareCleanup
 
 # Adding the pythonpath for importing modules from cloudwash packages
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
@@ -34,13 +37,24 @@ def common_options(func):
 # Click Interactive for Cloud Resources Cleanup
 
 
-@click.group(help="A Cleanup Utility to remove the VMs, Discs and Nics from Providers!")
+@click.group(
+    help="A Cleanup Utility to remove the VMs, Discs and Nics from Providers!",
+    invoke_without_command=True,
+)
+@click.option("--version", is_flag=True, help="Get installed version of cloudwash in system")
 @click.option("-d", "--dry", is_flag=True, help="Only show what will be removed from Providers!")
-def cleanup_providers(dry):
-    if dry:
-        logger.info("\n<<<<<<< Running the cleanup script in DRY RUN mode >>>>>>> ")
-    else:
-        logger.info("\n<<<<<<< Running the cleanup script in ACTION mode >>>>>>> ")
+@click.pass_context
+def cleanup_providers(ctx, dry, version):
+    if version:
+        import pkg_resources
+
+        cloudwash_version = pkg_resources.get_distribution("cloudwash").version
+        click.echo(f"Version: {cloudwash_version}")
+        click.echo(f"Settings File: {settings.settings_file}")
+    if ctx.invoked_subcommand:
+        logger.info(
+            f"\n<<<<<<< Running the cleanup script in {'DRY' if dry else 'ACTION'} RUN mode >>>>>>>"
+        )
 
 
 @cleanup_providers.command(help="Cleanup GCE provider")
@@ -63,7 +77,7 @@ def gce(ctx, vms, discs, nics, _all):
     help="Remove resource group only if all resources are older than SLA",
 )
 @click.pass_context
-def azure(ctx, vms, discs, nics, pips, _all, _all_rg):
+def azure(ctx, vms, discs, nics, images, pips, _all, _all_rg):
     # Validate Azure Settings
     validate_provider(ctx.command.name)
     is_dry_run = ctx.parent.params["dry"]
@@ -71,6 +85,7 @@ def azure(ctx, vms, discs, nics, pips, _all, _all_rg):
         vms=vms,
         discs=discs,
         nics=nics,
+        images=images,
         pips=pips,
         _all=_all,
         _all_rg=_all_rg,
@@ -86,10 +101,31 @@ def azure(ctx, vms, discs, nics, pips, _all, _all_rg):
 #                                                  "reference, formatted as {time_value}{time-unit}")
 @click.pass_context
 def ec2(ctx, vms, discs, nics, pips, ocps, _all):
-    # Validate Amazon Settings
     validate_provider(ctx.command.name)
     is_dry_run = ctx.parent.params["dry"]
     ec2Cleanup(vms=vms, discs=discs, nics=nics, pips=pips, ocps=ocps, _all=_all, dry_run=is_dry_run)
+
+@cleanup_providers.command(help="Cleanup Amazon provider")
+@common_options
+@click.option("--images", is_flag=True, help="Remove only images from the provider")
+@click.option("--pips", is_flag=True, help="Remove only Public IPs from the provider")
+@click.option("--stacks", is_flag=True, help="Remove only CloudFormations from the provider")
+@click.option("--ocps", is_flag=True, help="Remove only unused OCPs from the provider")
+@click.pass_context
+def aws(ctx, vms, discs, nics, images, pips, stacks, _all):
+    # Validate Amazon Settings
+    validate_provider(ctx.command.name)
+    is_dry_run = ctx.parent.params["dry"]
+    awsCleanup(
+        vms=vms,
+        discs=discs,
+        nics=nics,
+        images=images,
+        pips=pips,
+        stacks=stacks,
+        _all=_all,
+        dry_run=is_dry_run,
+    )
 
 
 @cleanup_providers.command(help="Cleanup VMWare provider")
@@ -97,7 +133,8 @@ def ec2(ctx, vms, discs, nics, pips, ocps, _all):
 @click.pass_context
 def vmware(ctx, vms, discs, nics, _all):
     validate_provider(ctx.command.name)
-    # Further TO_BE_IMPLEMENTED
+    is_dry_run = ctx.parent.params["dry"]
+    vmwareCleanup(vms=vms, discs=discs, nics=nics, _all=_all, dry_run=is_dry_run)
 
 
 @cleanup_providers.command(help="Cleanup RHEV provider")
@@ -105,7 +142,7 @@ def vmware(ctx, vms, discs, nics, _all):
 @click.pass_context
 def rhev(ctx, vms, discs, nics, _all):
     validate_provider(ctx.command.name)
-    # Further TO_BE_IMPLEMENTED
+    # TODO: Further TO_BE_IMPLEMENTED
 
 
 @cleanup_providers.command(help="Cleanup OSP provider")
@@ -113,7 +150,7 @@ def rhev(ctx, vms, discs, nics, _all):
 @click.pass_context
 def openstack(ctx, vms, discs, nics, _all):
     validate_provider(ctx.command.name)
-    # Further TO_BE_IMPLEMENTED
+    # TODO: Further TO_BE_IMPLEMENTED
 
 
 if __name__ == "__main__":

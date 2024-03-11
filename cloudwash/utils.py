@@ -14,6 +14,8 @@ dry_data = {
     "PIPS": {"delete": []},
     "OCPS": {"delete": []},
     "RESOURCES": {"delete": []},
+    "STACKS": {"delete": []},
+    "IMAGES": {"delete": []},
 }
 
 dry_data.update(_vms_dict)
@@ -31,25 +33,31 @@ def echo_dry(dry_data=None) -> None:
     skipped_vms = dry_data["VMS"]["skip"]
     deletable_discs = dry_data["DISCS"]["delete"]
     deletable_nics = dry_data["NICS"]["delete"]
+    deletable_images = dry_data["IMAGES"]["delete"]
     deletable_pips = dry_data["PIPS"]["delete"] if "PIPS" in dry_data else None
     deletable_ocps = [ocp["name"] for ocp in dry_data["OCPS"]["delete"]]
     deletable_resources = dry_data["RESOURCES"]["delete"]
+    deletable_stacks = dry_data["STACKS"]["delete"] if "STACKS" in dry_data else None
     if deletable_vms or stopable_vms or skipped_vms:
         logger.info(
             f"VMs:\n\tDeletable: {deletable_vms}\n\tStoppable: {stopable_vms}\n\t"
-            "Skip: {skipped_vms}"
+            f"Skip: {skipped_vms}"
         )
 
     if deletable_discs:
         logger.info(f"DISCs:\n\tDeletable: {deletable_discs}")
     if deletable_nics:
         logger.info(f"NICs:\n\tDeletable: {deletable_nics}")
+    if deletable_images:
+        logger.info(f"IMAGES:\n\tDeletable: {deletable_images}")
     if deletable_pips:
         logger.info(f"PIPs:\n\tDeletable: {deletable_pips}")
     if deletable_ocps:
         logger.info(f"OCPs:\n\tDeletable: {deletable_ocps}")
     if deletable_resources:
         logger.info(f"RESOURCEs:\n\tDeletable: {deletable_resources}")
+    if deletable_stacks:
+        logger.info(f"STACKs:\n\tDeletable: {deletable_stacks}")
     if not any(
         [
             deletable_vms,
@@ -58,6 +66,8 @@ def echo_dry(dry_data=None) -> None:
             deletable_nics,
             deletable_pips,
             deletable_resources,
+            deletable_stacks,
+            deletable_images,
         ]
     ):
         logger.info("\nNo resources are eligible for cleanup!")

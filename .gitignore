@@ -11,3 +11,7 @@ openshift-install
 **/cleanup*.log
 *.pyc
 dist/
+build/
+conf/*.yaml
+vcd_sdk.log
+*_venv
