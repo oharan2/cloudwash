@@ -5,6 +5,7 @@ from cloudwash.logger import logger
 from cloudwash.utils import dry_data
 from cloudwash.utils import echo_dry
 from cloudwash.utils import total_running_time
+from cloudwash.providers.ec2 import cleanup as ec2Cleanup
 
 
 def cleanup(**kwargs):
@@ -142,5 +143,7 @@ def cleanup(**kwargs):
                 if not is_dry_run:
                     remove_stacks(stacks=rstacks)
                     logger.info(f"Removed Stacks: \n{rstacks}")
+            if kwargs["ocps"] or kwargs["_all"]:
+                ec2Cleanup(dry_run=is_dry_run)
             if is_dry_run:
                 echo_dry(dry_data)
