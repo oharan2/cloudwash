@@ -5,12 +5,11 @@ from cloudwash.logger import logger
 from cloudwash.utils import dry_data
 from cloudwash.utils import echo_dry
 from cloudwash.utils import total_running_time
-from cloudwash.providers.ec2 import cleanup as ec2Cleanup
 
 
 def cleanup(**kwargs):
     is_dry_run = kwargs["dry_run"]
-    data = ['VMS', 'NICS', 'DISCS', 'PIPS', 'RESOURCES', 'STACKS']
+    data = ['VMS', 'NICS', 'DISCS', 'PIPS', 'RESOURCES', 'STACKS', 'OCPS']
     regions = settings.aws.auth.regions
     if "all" in regions:
         with compute_client("aws", aws_region="us-west-2") as client:
@@ -97,6 +96,15 @@ def cleanup(**kwargs):
 
                 return rstacks
 
+            def dry_ocps():
+                import ipdb
+                ipdb.set_trace()
+                all_ocps = aws_client.list_ocps()
+                for ocp in all_ocps:
+                    # TODO: Filter according to the SLA_MINUTES
+                    dry_data["OCPS"]["delete"].append(ocp)
+                return dry_data["OCPS"]["delete"]
+
             # Remove / Stop VMs
             def remove_vms(avms):
                 # Remove VMs
@@ -144,6 +152,13 @@ def cleanup(**kwargs):
                     remove_stacks(stacks=rstacks)
                     logger.info(f"Removed Stacks: \n{rstacks}")
             if kwargs["ocps"] or kwargs["_all"]:
-                ec2Cleanup(dry_run=is_dry_run)
+                import ipdb
+                ipdb.set_trace()
+                rocps = dry_ocps()
+                if not is_dry_run:
+                    for ocp in rocps:
+                        delete_ocp(ocp)
+                    ocp_names = [ocp["name"] for ocp in rocps]
+                    logger.info(f"[WIP] Removed OCP clusters: \n{ocp_names}")
             if is_dry_run:
                 echo_dry(dry_data)
