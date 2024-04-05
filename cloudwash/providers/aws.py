@@ -6,6 +6,7 @@ from cloudwash.utils import dry_data
 from cloudwash.utils import echo_dry
 from cloudwash.utils import total_running_time
 
+OCP_QUERY = "tag.key:kubernetes.io/cluster/*"
 
 def cleanup(**kwargs):
     is_dry_run = kwargs["dry_run"]
@@ -96,12 +97,18 @@ def cleanup(**kwargs):
 
                 return rstacks
 
-            def dry_ocps():
-                import ipdb
+            def dry_ocps(regions=[]):
+                time_ref = settings.aws.criteria.ocps.time_ref or "7d"
+                all_ocps = []
+
+                for region in regions:
+                    query = " ".join([OCP_QUERY,f"region:{region}"])
+                    all_ocps.extend(aws_client.list_resources(query=query,
+                                                              time_ref=time_ref))
                 ipdb.set_trace()
-                all_ocps = aws_client.list_ocps()
                 for ocp in all_ocps:
                     # TODO: Filter according to the SLA_MINUTES
+                    # if total_running_time(ocp).minutes >= settings.aws.criteria.ocps.sla_minutes
                     dry_data["OCPS"]["delete"].append(ocp)
                 return dry_data["OCPS"]["delete"]
 
@@ -152,9 +159,10 @@ def cleanup(**kwargs):
                     remove_stacks(stacks=rstacks)
                     logger.info(f"Removed Stacks: \n{rstacks}")
             if kwargs["ocps"] or kwargs["_all"]:
+                regions = settings.aws.criteria.ocps.regions
+                rocps = dry_ocps(regions=regions)
                 import ipdb
                 ipdb.set_trace()
-                rocps = dry_ocps()
                 if not is_dry_run:
                     for ocp in rocps:
                         delete_ocp(ocp)

@@ -115,6 +115,8 @@ def aws(ctx, vms, discs, nics, images, pips, stacks, ocps, _all):
         _all=_all,
         dry_run=is_dry_run,
     )
+    import ipdb
+    ipdb.set_trace()
 
 
 @cleanup_providers.command(help="Cleanup VMWare provider")
